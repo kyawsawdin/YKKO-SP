@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lucky Draw Event</title>
+    <title>YKKO : Staff Party - Lucky Draw Event</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <!-- Font Awesome for icons -->
@@ -18,7 +18,7 @@
         // Firebase Global variables provided by the Canvas environment
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
+        
         // Custom firebaseConfig provided by the user
         const firebaseConfig = {
             apiKey: "AIzaSyAMt0b4VerCgr6wj2K2Ago_UtgpzODEb4I",
@@ -35,6 +35,392 @@
 
         // Configuration for the lottery, including participants and prizes.
         // This is stored client-side for consistent display logic.
+        const LOTTERY_CONFIG = {
+            // Define the list of participants (e.g., employee IDs)
+            participants: Array.from({ length: 47370 - 37370 + 1 }, (_, i) => 37370 + i),
+            // Define the prizes and the number of winners for each
+            prizes: {
+                "third-prize": { name: "Third Prize", count: 5 },
+                "second-prize": { name: "Second Prize", count: 3 },
+                "first-prize": { name: "First Prize", count: 1 },
+                "grand-prize": { name: "Grand Prize", count: 1 },
+            }
+        };
+
+        // --- GLOBAL VARIABLES & ELEMENTS ---
+        let isAdmin = false;
+        let localState = {};
+        let confirmCallback = null;
+        let animationState = 'initial_grid'; // 'initial_grid', 'spinning', 'winner'
+        
+        // UI Elements
+        const prizeNameEl = document.getElementById('prize-name');
+        const prizeCountEl = document.getElementById('prize-count');
+        const winnersListEl = document.getElementById('winners-list');
+        const adminPanel = document.getElementById('admin-panel');
+        const drawBtn = document.getElementById('draw-btn');
+        const prizeSelect = document.getElementById('prize-select');
+        const resetPrizeBtn = document.getElementById('reset-prize-btn');
+        const resetAllBtn = document.getElementById('reset-all-btn');
+        const exportWinnersBtn = document.getElementById('export-winners-btn');
+        const connectionStatusEl = document.getElementById('connection-status');
+        
+        const prizeUploadFile = document.getElementById('prize-upload-file');
+        const uploadPrizeBtn = document.getElementById('upload-prize-btn');
+        const participantUploadFile = document.getElementById('participant-upload-file');
+        const uploadParticipantBtn = document.getElementById('upload-participant-btn');
+        const adminMessageEl = document.getElementById('admin-message');
+        
+        const modal = document.getElementById('confirmation-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalText = document.getElementById('modal-text');
+        const modalConfirm = document.getElementById('modal-confirm');
+        const modalCancel = document.getElementById('modal-cancel');
+        
+        const passwordFormContainer = document.getElementById('password-form-container');
+        const passwordForm = document.getElementById('password-form');
+        const passwordInput = document.getElementById('admin-password');
+        const passwordError = document.getElementById('password-error');
+        
+        const adminToggleBtn = document.getElementById('admin-toggle-btn');
+        const adminPanelContent = document.getElementById('admin-panel-content');
+        
+        const lotteryControlsTab = document.getElementById('lottery-controls-tab');
+        const settingsTab = document.getElementById('settings-tab');
+        const lotteryControlsContent = document.getElementById('lottery-controls-content');
+        const settingsContent = document.getElementById('settings-content');
+
+        // Hardcoded admin password for this example.
+        const ADMIN_PASSWORD = "iloveyou!@#$%";
+        
+        // --- Three.js Animation Globals ---
+        let scene, camera, renderer, starScene, starRenderer, starCamera;
+        let cards = [];
+        let cardGroup;
+        let animationFrameId = null;
+        let starAnimationFrameId = null;
+        let winningCard = null;
+        let spinningSpeed = 0;
+        let targetSpinningSpeed = 0;
+        let winnerNumberDisplay = document.getElementById('winner-number-display');
+        
+        // --- Firebase Setup & Real-time Listener ---
+        async function initializeFirebase() {
+            try {
+                if (!firebaseConfig.apiKey) {
+                    throw new Error("Firebase config is missing API key.");
+                }
+
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Sign in with custom token if available, otherwise anonymously
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                // Listen for auth state changes to get the user ID
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        connectionStatusEl.textContent = 'Connected';
+                        connectionStatusEl.classList.remove('bg-gray-900', 'text-gray-400', 'bg-red-700');
+                        connectionStatusEl.classList.add('bg-green-700', 'text-white');
+                        
+                        // Set up the real-time listener for the lottery state
+                        const lotteryDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'lottery_data', 'lottery_state');
+                        onSnapshot(lotteryDocRef, (docSnap) => {
+                            if (docSnap.exists()) {
+                                updateUI(docSnap.data());
+                            } else {
+                                console.log("No lottery state found, initializing new state.");
+                                initializeLotteryState();
+                            }
+                        }, (error) => {
+                            console.error("Firestore snapshot error:", error);
+                            connectionStatusEl.textContent = 'Disconnected';
+                            connectionStatusEl.classList.remove('bg-green-700', 'text-white');
+                            connectionStatusEl.classList.add('bg-red-700', 'text-white');
+                        });
+                    } else {
+                        console.log("No user signed in.");
+                    }
+                });
+
+            } catch (error) {
+                console.error("Firebase initialization or authentication failed:", error);
+            }
+        }
+        
+        async function initializeLotteryState() {
+            const lotteryDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'lottery_data', 'lottery_state');
+            const initialPrizeId = Object.keys(LOTTERY_CONFIG.prizes)[0];
+            const initialResults = {};
+            Object.keys(LOTTERY_CONFIG.prizes).forEach(id => { initialResults[id] = []; });
+            const initialState = {
+                running: false,
+                currentPrizeId: initialPrizeId,
+                lastWinner: "READY",
+                results: initialResults
+            };
+            try {
+                await setDoc(lotteryDocRef, initialState);
+            } catch (e) {
+                console.error("Error initializing lottery state:", e);
+            }
+        }
+        
+        // --- Three.js Animation Logic ---
+        let lotteryCanvas, starCanvas;
+        
+        function initThreeJs() {
+            lotteryCanvas = document.getElementById('lottery-canvas');
+            starCanvas = document.getElementById('bg-canvas');
+            
+            // Main lottery scene setup
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 250;
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            lotteryCanvas.appendChild(renderer.domElement);
+            
+            // Starfield scene setup
+            starScene = new THREE.Scene();
+            starCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            starCamera.position.z = 5;
+            starRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            starRenderer.setSize(window.innerWidth, window.innerHeight);
+            starCanvas.appendChild(starRenderer.domElement);
+
+            // Create starfield
+            const starVertices = [];
+            for (let i = 0; i < 10000; i++) {
+                const x = (Math.random() - 0.5) * 2000;
+                const y = (Math.random() - 0.5) * 2000;
+                const z = (Math.random() - 0.5) * 2000;
+                starVertices.push(x, y, z);
+            }
+            const starGeometry = new THREE.BufferGeometry();
+            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+            const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.7 });
+            const stars = new THREE.Points(starGeometry, starMaterial);
+            starScene.add(stars);
+
+            // Create cards and add them to the main scene
+            createInitialGrid();
+            
+            // Start both animation loops
+            animateStars();
+            animateCards();
+        }
+        
+        function createCard(participantNumber) {
+            // Create a canvas to use as a texture for the card
+            const canvas = document.createElement('canvas');
+            const size = 256;
+            canvas.width = size;
+            canvas.height = size / 1.5; // Aspect ratio for the card
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = '#0f0c29';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.strokeStyle = '#a855f7';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#fefde8';
+            ctx.font = 'bold 64px Inter';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(participantNumber, canvas.width / 2, canvas.height / 2);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            
+            const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+            const geometry = new THREE.PlaneGeometry(25, 15);
+            const card = new THREE.Mesh(geometry, material);
+            card.participantNumber = participantNumber; // Store the number on the card object
+            return card;
+        }
+
+        function createInitialGrid() {
+            cardGroup = new THREE.Group();
+            cards = [];
+            
+            const numCards = 7 * 25;
+            const cardSize = 30;
+            const cardsPerRow = 25;
+            const cardsPerCol = 7;
+
+            for (let i = 0; i < numCards; i++) {
+                const randomNumber = Math.floor(Math.random() * 99999) + 1; // Random number for initial display
+                const card = createCard(randomNumber);
+                const row = Math.floor(i / cardsPerRow);
+                const col = i % cardsPerRow;
+                
+                const x = (col - cardsPerRow / 2 + 0.5) * cardSize;
+                const y = (cardsPerCol / 2 - row - 0.5) * cardSize;
+                const z = 0;
+                
+                card.position.set(x, y, z);
+                card.userData.initialPosition = card.position.clone();
+                card.userData.initialRotation = card.rotation.clone();
+                
+                // Calculate sphere position for a smooth transition
+                const phi = Math.acos(-1 + (2 * i) / numCards);
+                const theta = Math.sqrt(numCards * Math.PI) * phi;
+                
+                card.userData.spherePosition = new THREE.Vector3(
+                    150 * Math.cos(theta) * Math.sin(phi),
+                    150 * Math.sin(theta) * Math.sin(phi),
+                    150 * Math.cos(phi)
+                );
+
+                cardGroup.add(card);
+                cards.push(card);
+            }
+            scene.add(cardGroup);
+        }
+
+        function animateStars() {
+            // Animate starfield background
+            const stars = starScene.children[0];
+            if (stars) {
+                stars.position.z += 0.2;
+                if (stars.position.z > 1000) {
+                    stars.position.z = -1000;
+                }
+            }
+            starRenderer.render(starScene, starCamera);
+            starAnimationFrameId = requestAnimationFrame(animateStars);
+        }
+        
+        function updateCardContent(card, newNumber) {
+            const canvas = card.material.map.image;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear previous content
+            
+            ctx.fillStyle = '#0f0c29';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.strokeStyle = '#a855f7';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#fefde8';
+            ctx.font = 'bold 64px Inter';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(newNumber, canvas.width / 2, canvas.height / 2);
+            
+            card.material.map.needsUpdate = true; // Tell Three.js to update the texture
+            card.participantNumber = newNumber;
+        }
+
+        function animateCards() {
+            const time = performance.now() / 1000;
+            
+            switch(animationState) {
+                case 'initial_grid':
+                    // Slowly rotate the card group and update numbers for a subtle effect
+                    cardGroup.rotation.x = Math.sin(time * 0.1) * 0.05;
+                    cardGroup.rotation.y = Math.cos(time * 0.1) * 0.05;
+                    
+                    // Update numbers randomly on some cards
+                    if (Math.random() < 0.05) { // Update a few cards per frame
+                        const cardToUpdate = cards[Math.floor(Math.random() * cards.length)];
+                        const newNumber = Math.floor(Math.random() * 99999) + 1;
+                        updateCardContent(cardToUpdate, newNumber);
+                    }
+                    break;
+                case 'spinning':
+                    // Smoothly increase spinning speed and transition cards
+                    spinningSpeed = THREE.MathUtils.lerp(spinningSpeed, targetSpinningSpeed, 0.05);
+                    cardGroup.rotation.x += spinningSpeed * 0.5;
+                    cardGroup.rotation.y += spinningSpeed * 0.8;
+                    cardGroup.rotation.z += spinningSpeed * 0.3;
+                    
+                    // Move cards to a sphere-like formation
+                    cards.forEach((card, i) => {
+                         card.position.lerp(card.userData.spherePosition, 0.1);
+                         
+                         // Update numbers randomly to simulate a draw
+                         if (Math.random() < 0.1) {
+                             const newNumber = Math.floor(Math.random() * 99999) + 1;
+                             updateCardContent(card, newNumber);
+                         }
+                    });
+                    break;
+                case 'winner':
+                    // Slow down and highlight winner
+                    spinningSpeed = THREE.MathUtils.lerp(spinningSpeed, 0, 0.02);
+                    cardGroup.rotation.x += spinningSpeed * 0.5;
+                    cardGroup.rotation.y += spinningSpeed * 0.8;
+                    cardGroup.rotation.z += spinningSpeed * 0.3;
+
+                    // Zoom into the winning card
+                    if (winningCard) {
+                        winnerNumberDisplay.textContent = winningCard.participantNumber;
+                        winnerNumberDisplay.classList.remove('hidden');
+                        
+                        const cardPosition = new THREE.Vector3();
+                        winningCard.getWorldPosition(cardPosition);
+                        
+                        camera.position.lerp(cardPosition.clone().add(new THREE.Vector3(0, 0, 20)), 0.05);
+                        camera.lookAt(cardPosition);
+                        
+                        // Fade out other cards
+                        cards.forEach(card => {
+                            if (card !== winningCard) {
+                                card.material.opacity = THREE.MathUtils.lerp(card.material.opacity, 0, 0.05);
+                            }
+                        });
+                        winningCard.material.color.lerp(new THREE.Color(0xffff00), 0.1); // Highlight winner
+                    }
+                    break;
+            }
+            
+            renderer.render(scene, camera);
+            animationFrameId = requestAnimationFrame(animateCards);
+        }
+        
+        function onWindowResize() {
+             if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+            if (starCamera && starRenderer) {
+                starCamera.aspect = window.innerWidth / window.innerHeight;
+                starCamera.updateProjectionMatrix();
+                starRenderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        }
+        
+        function resetCameraAndCards() {
+            camera.position.set(0, 0, 250);
+            camera.lookAt(new THREE.Vector3(0, 0, 0));
+            winnerNumberDisplay.classList.add('hidden');
+            winningCard = null;
+            // Reset card positions and opacity
+            cards.forEach(card => {
+                 card.position.copy(card.userData.initialPosition);
+                 card.rotation.copy(card.userData.initialRotation);
+                 card.material.opacity = 1;
+                 card.material.color.set(0xffffff);
+            });
+            animationState = 'initial_grid';
+        }
+
+        // --- UI & LOTTERY LOGIC ---
+        function updateUI(state) {
+            localState = state;
+                  // This is stored client-side for consistent display logic.
         const LOTTERY_CONFIG = {
             // Define the list of participants (e.g., employee IDs)
             participants: Array.from({ length: 47370 - 37370 + 1 }, (_, i) => 37370 + i),
