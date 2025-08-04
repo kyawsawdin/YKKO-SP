@@ -38,7 +38,7 @@
         // This is stored client-side for consistent display logic.
         const LOTTERY_CONFIG = {
             // Define the list of participants (e.g., employee IDs)
-            participants: Array.from({ length: 47370 - 37370 + 1 }, (_, i) => 37370 + i),
+            participants: Array.from({ length: 37570 - 37370 + 1 }, (_, i) => 37370 + i),
             // Define the prizes and the number of winners for each
             prizes: {
                 "third-prize": { name: "Third Prize", count: 5 },
@@ -52,7 +52,7 @@
         let isAdmin = false;
         let localState = {};
         let confirmCallback = null;
-        let animationState = 'grid'; // 'grid', 'spinning', 'winner'
+        let animationState = 'initial_grid'; // 'initial_grid', 'spinning', 'winner'
         
         // UI Elements
         const prizeNameEl = document.getElementById('prize-name');
@@ -209,7 +209,7 @@
             starScene.add(stars);
 
             // Create cards and add them to the main scene
-            createCardsGrid();
+            createInitialGrid();
             
             // Start both animation loops
             animateStars();
@@ -246,22 +246,23 @@
             return card;
         }
 
-        function createCardsGrid() {
+        function createInitialGrid() {
             cardGroup = new THREE.Group();
-            const gridWidth = 200;
+            cards = [];
+            
+            const numCards = 7 * 25;
             const cardSize = 30;
-            const participants = LOTTERY_CONFIG.participants;
+            const cardsPerRow = 25;
+            const cardsPerCol = 7;
 
-            const cardsPerRow = Math.ceil(Math.sqrt(participants.length));
-            const cardsPerCol = Math.ceil(participants.length / cardsPerRow);
-
-            for (let i = 0; i < participants.length; i++) {
-                const card = createCard(participants[i]);
+            for (let i = 0; i < numCards; i++) {
+                const randomNumber = Math.floor(Math.random() * 99999) + 1; // Random number for initial display
+                const card = createCard(randomNumber);
                 const row = Math.floor(i / cardsPerRow);
                 const col = i % cardsPerRow;
                 
-                const x = (col - cardsPerRow / 2) * cardSize;
-                const y = (cardsPerCol / 2 - row) * cardSize;
+                const x = (col - cardsPerRow / 2 + 0.5) * cardSize;
+                const y = (cardsPerCol / 2 - row - 0.5) * cardSize;
                 const z = 0;
                 
                 card.position.set(x, y, z);
@@ -269,19 +270,13 @@
                 card.userData.initialRotation = card.rotation.clone();
                 
                 // Calculate sphere position
-                const phi = Math.acos(-1 + (2 * i) / participants.length);
-                const theta = Math.sqrt(participants.length * Math.PI) * phi;
+                const phi = Math.acos(-1 + (2 * i) / numCards);
+                const theta = Math.sqrt(numCards * Math.PI) * phi;
                 
                 card.userData.spherePosition = new THREE.Vector3(
                     150 * Math.cos(theta) * Math.sin(phi),
                     150 * Math.sin(theta) * Math.sin(phi),
                     150 * Math.cos(phi)
-                );
-                
-                card.userData.sphereRotation = new THREE.Vector3(
-                    0,
-                    0,
-                    0
                 );
 
                 cardGroup.add(card);
@@ -307,8 +302,8 @@
             const time = performance.now() / 1000;
             
             switch(animationState) {
-                case 'grid':
-                    // Idle state
+                case 'initial_grid':
+                    // Slowly rotate the card group for a subtle effect
                     cardGroup.rotation.x = Math.sin(time * 0.1) * 0.05;
                     cardGroup.rotation.y = Math.cos(time * 0.1) * 0.05;
                     cardGroup.rotation.z = Math.sin(time * 0.1) * 0.05;
@@ -378,15 +373,15 @@
             camera.lookAt(new THREE.Vector3(0, 0, 0));
             winnerNumberDisplay.classList.add('hidden');
             winningCard = null;
-            cards.forEach(card => {
-                card.material.opacity = 1;
-                card.material.color.setHex(0xffffff);
-                card.position.lerp(card.userData.initialPosition, 1); // Instantly snap back
-                card.rotation.lerp(card.userData.initialRotation, 1);
-            });
-            animationState = 'grid';
+            // Clear existing cards
+            while(cardGroup.children.length > 0) {
+                 cardGroup.remove(cardGroup.children[0]);
+            }
+            cards = [];
+            createInitialGrid();
+            animationState = 'initial_grid';
         }
-        
+
         // --- UI & LOTTERY LOGIC ---
         function updateUI(state) {
             localState = state;
@@ -405,6 +400,13 @@
                 if(animationState !== 'spinning') {
                     animationState = 'spinning';
                     targetSpinningSpeed = 0.05;
+
+                    // Transition from initial grid to full participant sphere
+                    while(cardGroup.children.length > 0) {
+                         cardGroup.remove(cardGroup.children[0]);
+                    }
+                    cards = [];
+                    createFullParticipantSphere();
                 }
                 if(isAdmin) {
                     drawBtn.disabled = true;
@@ -417,7 +419,7 @@
                 if (state.lastWinner && state.lastWinner !== "READY" && state.lastWinner !== "NO ONE LEFT" && state.lastWinner !== "CLEARED" && animationState !== 'winner') {
                     animationState = 'winner';
                     winningCard = cards.find(card => card.participantNumber === state.lastWinner);
-                } else if (animationState !== 'grid') {
+                } else if (animationState !== 'initial_grid') {
                     resetCameraAndCards();
                 }
 
@@ -458,6 +460,32 @@
                 });
             } else {
                 winnersListEl.innerHTML = `<div class="p-4 rounded-lg winner-card text-center flex-grow"><p class="text-gray-400">Waiting for the draw...</p></div>`;
+            }
+        }
+        
+        function createFullParticipantSphere() {
+            const participants = LOTTERY_CONFIG.participants;
+            const numCards = participants.length;
+
+            for (let i = 0; i < numCards; i++) {
+                const card = createCard(participants[i]);
+                
+                // Calculate sphere position
+                const phi = Math.acos(-1 + (2 * i) / numCards);
+                const theta = Math.sqrt(numCards * Math.PI) * phi;
+                
+                card.position.set(
+                    150 * Math.cos(theta) * Math.sin(phi),
+                    150 * Math.sin(theta) * Math.sin(phi),
+                    150 * Math.cos(phi)
+                );
+                
+                card.userData.spherePosition = card.position.clone();
+                card.userData.initialPosition = new THREE.Vector3(0,0,0); // A generic initial position for the lerp transition
+                card.userData.initialRotation = new THREE.Vector3(0,0,0);
+
+                cardGroup.add(card);
+                cards.push(card);
             }
         }
         
