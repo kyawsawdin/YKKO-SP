@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YKKO : Staff Party - Lucky Draw Event</title>
+    <title>Lucky Draw Event</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <!-- Font Awesome for icons -->
@@ -30,7 +30,6 @@
             measurementId: "G-W0RSQX8XJ8"
         };
         
-
         let db, auth;
         let userId = null;
 
@@ -38,7 +37,7 @@
         // This is stored client-side for consistent display logic.
         const LOTTERY_CONFIG = {
             // Define the list of participants (e.g., employee IDs)
-            participants: Array.from({ length: 37570 - 37370 + 1 }, (_, i) => 37370 + i),
+            participants: Array.from({ length: 47370 - 37370 + 1 }, (_, i) => 37370 + i),
             // Define the prizes and the number of winners for each
             prizes: {
                 "third-prize": { name: "Third Prize", count: 5 },
@@ -101,7 +100,6 @@
         let animationFrameId = null;
         let starAnimationFrameId = null;
         let winningCard = null;
-        let winnerZoomProgress = 0;
         let spinningSpeed = 0;
         let targetSpinningSpeed = 0;
         let winnerNumberDisplay = document.getElementById('winner-number-display');
@@ -269,7 +267,7 @@
                 card.userData.initialPosition = card.position.clone();
                 card.userData.initialRotation = card.rotation.clone();
                 
-                // Calculate sphere position
+                // Calculate sphere position for a smooth transition
                 const phi = Math.acos(-1 + (2 * i) / numCards);
                 const theta = Math.sqrt(numCards * Math.PI) * phi;
                 
@@ -297,27 +295,61 @@
             starRenderer.render(starScene, starCamera);
             starAnimationFrameId = requestAnimationFrame(animateStars);
         }
+        
+        function updateCardContent(card, newNumber) {
+            const canvas = card.material.map.image;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear previous content
+            
+            ctx.fillStyle = '#0f0c29';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.strokeStyle = '#a855f7';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#fefde8';
+            ctx.font = 'bold 64px Inter';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(newNumber, canvas.width / 2, canvas.height / 2);
+            
+            card.material.map.needsUpdate = true; // Tell Three.js to update the texture
+            card.participantNumber = newNumber;
+        }
 
         function animateCards() {
             const time = performance.now() / 1000;
             
             switch(animationState) {
                 case 'initial_grid':
-                    // Slowly rotate the card group for a subtle effect
+                    // Slowly rotate the card group and update numbers for a subtle effect
                     cardGroup.rotation.x = Math.sin(time * 0.1) * 0.05;
                     cardGroup.rotation.y = Math.cos(time * 0.1) * 0.05;
-                    cardGroup.rotation.z = Math.sin(time * 0.1) * 0.05;
+                    
+                    // Update numbers randomly on some cards
+                    if (Math.random() < 0.05) { // Update a few cards per frame
+                        const cardToUpdate = cards[Math.floor(Math.random() * cards.length)];
+                        const newNumber = Math.floor(Math.random() * 99999) + 1;
+                        updateCardContent(cardToUpdate, newNumber);
+                    }
                     break;
                 case 'spinning':
-                    // Smoothly increase spinning speed
+                    // Smoothly increase spinning speed and transition cards
                     spinningSpeed = THREE.MathUtils.lerp(spinningSpeed, targetSpinningSpeed, 0.05);
                     cardGroup.rotation.x += spinningSpeed * 0.5;
                     cardGroup.rotation.y += spinningSpeed * 0.8;
                     cardGroup.rotation.z += spinningSpeed * 0.3;
                     
-                    // Transition cards to sphere
-                    cards.forEach(card => {
+                    // Move cards to a sphere-like formation
+                    cards.forEach((card, i) => {
                          card.position.lerp(card.userData.spherePosition, 0.1);
+                         
+                         // Update numbers randomly to simulate a draw
+                         if (Math.random() < 0.1) {
+                             const newNumber = Math.floor(Math.random() * 99999) + 1;
+                             updateCardContent(card, newNumber);
+                         }
                     });
                     break;
                 case 'winner':
@@ -331,8 +363,7 @@
                     if (winningCard) {
                         winnerNumberDisplay.textContent = winningCard.participantNumber;
                         winnerNumberDisplay.classList.remove('hidden');
-
-                        const targetPosition = new THREE.Vector3(0, 0, 100);
+                        
                         const cardPosition = new THREE.Vector3();
                         winningCard.getWorldPosition(cardPosition);
                         
@@ -346,7 +377,6 @@
                             }
                         });
                         winningCard.material.color.lerp(new THREE.Color(0xffff00), 0.1); // Highlight winner
-                        
                     }
                     break;
             }
@@ -373,12 +403,13 @@
             camera.lookAt(new THREE.Vector3(0, 0, 0));
             winnerNumberDisplay.classList.add('hidden');
             winningCard = null;
-            // Clear existing cards
-            while(cardGroup.children.length > 0) {
-                 cardGroup.remove(cardGroup.children[0]);
-            }
-            cards = [];
-            createInitialGrid();
+            // Reset card positions and opacity
+            cards.forEach(card => {
+                 card.position.copy(card.userData.initialPosition);
+                 card.rotation.copy(card.userData.initialRotation);
+                 card.material.opacity = 1;
+                 card.material.color.set(0xffffff);
+            });
             animationState = 'initial_grid';
         }
 
@@ -396,17 +427,9 @@
             }
             
             if (state.running) {
-                // Start animation
                 if(animationState !== 'spinning') {
                     animationState = 'spinning';
                     targetSpinningSpeed = 0.05;
-
-                    // Transition from initial grid to full participant sphere
-                    while(cardGroup.children.length > 0) {
-                         cardGroup.remove(cardGroup.children[0]);
-                    }
-                    cards = [];
-                    createFullParticipantSphere();
                 }
                 if(isAdmin) {
                     drawBtn.disabled = true;
@@ -415,10 +438,10 @@
                     drawBtn.classList.add('bg-gray-500', 'cursor-not-allowed');
                 }
             } else {
-                // Stop animation and show winner if one exists
                 if (state.lastWinner && state.lastWinner !== "READY" && state.lastWinner !== "NO ONE LEFT" && state.lastWinner !== "CLEARED" && animationState !== 'winner') {
                     animationState = 'winner';
-                    winningCard = cards.find(card => card.participantNumber === state.lastWinner);
+                    winningCard = cards[Math.floor(Math.random() * cards.length)];
+                    updateCardContent(winningCard, state.lastWinner);
                 } else if (animationState !== 'initial_grid') {
                     resetCameraAndCards();
                 }
@@ -460,32 +483,6 @@
                 });
             } else {
                 winnersListEl.innerHTML = `<div class="p-4 rounded-lg winner-card text-center flex-grow"><p class="text-gray-400">Waiting for the draw...</p></div>`;
-            }
-        }
-        
-        function createFullParticipantSphere() {
-            const participants = LOTTERY_CONFIG.participants;
-            const numCards = participants.length;
-
-            for (let i = 0; i < numCards; i++) {
-                const card = createCard(participants[i]);
-                
-                // Calculate sphere position
-                const phi = Math.acos(-1 + (2 * i) / numCards);
-                const theta = Math.sqrt(numCards * Math.PI) * phi;
-                
-                card.position.set(
-                    150 * Math.cos(theta) * Math.sin(phi),
-                    150 * Math.sin(theta) * Math.sin(phi),
-                    150 * Math.cos(phi)
-                );
-                
-                card.userData.spherePosition = card.position.clone();
-                card.userData.initialPosition = new THREE.Vector3(0,0,0); // A generic initial position for the lerp transition
-                card.userData.initialRotation = new THREE.Vector3(0,0,0);
-
-                cardGroup.add(card);
-                cards.push(card);
             }
         }
         
@@ -857,7 +854,7 @@
         
         <!-- Header -->
         <header class="w-full flex justify-between items-center">
-            <h1 class="text-2xl md:text-4xl font-bold text-amber-300">YKKO : Staff Party - Lucky Draw Event</h1>
+            <h1 class="text-2xl md:text-4xl font-bold text-amber-300">Lucky Draw Event</h1>
             <div id="prize-info" class="text-right">
                 <h2 id="prize-name" class="text-xl md:text-3xl font-bold text-white">--</h2>
                 <p id="prize-count" class="text-gray-300">--/-- Winners</p>
