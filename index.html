@@ -3,7 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Staff Party - Lucky Draw Event</title>
+    <title>Download Lottery App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f0c29;
+            color: #F9FAFB;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+            padding: 1rem;
+        }
+        .btn {
+            background-color: #4CAF50; /* Green */
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        .btn:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+        }
+        .container {
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 90%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1 class="text-3xl font-bold mb-4">Download the Lottery App</h1>
+        <p class="text-gray-300 mb-6">Tap the button below to download the `lottery-app.html` file to your device. You can then open it in any web browser to run the application.</p>
+        <button onclick="downloadFile()" class="btn">Download Lottery App</button>
+    </div>
+
+    <script>
+        function downloadFile() {
+            const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> : Staff Party - Lucky Draw Event</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <!-- Font Awesome for icons -->
@@ -22,9 +82,9 @@
         // Custom firebaseConfig provided by the user
         const firebaseConfig = {
             apiKey: "AIzaSyAMt0b4VerCgr6wj2K2Ago_UtgpzODEb4I",
-            authDomain: "ykko-staffparty-goodbye-ksd.firebaseapp.com",
-            projectId: "ykko-staffparty-goodbye-ksd",
-            storageBucket: "ykko-staffparty-goodbye-ksd.firebasestorage.app",
+            authDomain: "-staffparty-goodbye-ksd.firebaseapp.com",
+            projectId: "-staffparty-goodbye-ksd",
+            storageBucket: "-staffparty-goodbye-ksd.firebasestorage.app",
             messagingSenderId: "393329904546",
             appId: "1:393329904546:web:3751bc73e8d0505d4140fb",
             measurementId: "G-W0RSQX8XJ8"
@@ -90,6 +150,19 @@
         const lotteryControlsContent = document.getElementById('lottery-controls-content');
         const settingsContent = document.getElementById('settings-content');
 
+        // Gemini API UI Elements
+        const generateDescriptionBtn = document.getElementById('generate-description-btn');
+        const generatedDescriptionEl = document.getElementById('generated-description');
+        const generateAnnouncementBtn = document.getElementById('generate-announcement-btn');
+        const speakAnnouncementBtn = document.getElementById('speak-announcement-btn');
+        const generatedAnnouncementEl = document.getElementById('generated-announcement');
+        const announcementContainer = document.getElementById('announcement-container');
+        const announcementSpinner = document.getElementById('announcement-spinner');
+        const generateTeaserBtn = document.getElementById('generate-teaser-btn');
+        const nextPrizeTeaserEl = document.getElementById('next-prize-teaser');
+        const generateFunFactBtn = document.getElementById('generate-fun-fact-btn');
+        const winnerFunFactEl = document.getElementById('winner-fun-fact');
+        
         // Hardcoded admin password for this example.
         const ADMIN_PASSWORD = "iloveyou!@#$%";
         
@@ -174,7 +247,12 @@
                 running: false,
                 currentPrizeId: initialPrizeId,
                 lastWinner: "READY",
-                results: initialResults
+                results: initialResults,
+                // New fields for Gemini integration
+                prizeDescription: "",
+                winnerAnnouncement: "",
+                nextPrizeTeaser: "",
+                winnerFunFact: ""
             };
             try {
                 await setDoc(lotteryDocRef, initialState);
@@ -342,378 +420,7 @@
                     cardGroup.rotation.y = Math.cos(time * 0.1) * 0.05;
                     
                     // Update numbers randomly on some cards
-                    if (Math.random() < 0.05) { // Update a few cards per frame
-                        const cardToUpdate = cards[Math.floor(Math.random() * cards.length)];
-                        const newNumber = Math.floor(Math.random() * 99999) + 1;
-                        updateCardContent(cardToUpdate, newNumber);
-                    }
-                    break;
-                case 'spinning':
-                    // Smoothly increase spinning speed and transition cards
-                    spinningSpeed = THREE.MathUtils.lerp(spinningSpeed, targetSpinningSpeed, 0.05);
-                    cardGroup.rotation.x += spinningSpeed * 0.5;
-                    cardGroup.rotation.y += spinningSpeed * 0.8;
-                    cardGroup.rotation.z += spinningSpeed * 0.3;
-                    
-                    // Move cards to a sphere-like formation
-                    cards.forEach((card, i) => {
-                         card.position.lerp(card.userData.spherePosition, 0.1);
-                         
-                         // Update numbers randomly to simulate a draw
-                         if (Math.random() < 0.1) {
-                             const newNumber = Math.floor(Math.random() * 99999) + 1;
-                             updateCardContent(card, newNumber);
-                         }
-                    });
-                    break;
-                case 'winner':
-                    // Slow down and highlight winner
-                    spinningSpeed = THREE.MathUtils.lerp(spinningSpeed, 0, 0.02);
-                    cardGroup.rotation.x += spinningSpeed * 0.5;
-                    cardGroup.rotation.y += spinningSpeed * 0.8;
-                    cardGroup.rotation.z += spinningSpeed * 0.3;
-
-                    // Zoom into the winning card
-                    if (winningCard) {
-                        winnerNumberDisplay.textContent = winningCard.participantNumber;
-                        winnerNumberDisplay.classList.remove('hidden');
-                        
-                        const cardPosition = new THREE.Vector3();
-                        winningCard.getWorldPosition(cardPosition);
-                        
-                        camera.position.lerp(cardPosition.clone().add(new THREE.Vector3(0, 0, 20)), 0.05);
-                        camera.lookAt(cardPosition);
-                        
-                        // Fade out other cards
-                        cards.forEach(card => {
-                            if (card !== winningCard) {
-                                card.material.opacity = THREE.MathUtils.lerp(card.material.opacity, 0, 0.05);
-                            }
-                        });
-                        winningCard.material.color.lerp(new THREE.Color(0xffff00), 0.1); // Highlight winner
-                    }
-                    break;
-            }
-            
-            renderer.render(scene, camera);
-            animationFrameId = requestAnimationFrame(animateCards);
-        }
-        
-        function onWindowResize() {
-             if (camera && renderer) {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            }
-            if (starCamera && starRenderer) {
-                starCamera.aspect = window.innerWidth / window.innerHeight;
-                starCamera.updateProjectionMatrix();
-                starRenderer.setSize(window.innerWidth, window.innerHeight);
-            }
-        }
-        
-        function resetCameraAndCards() {
-            camera.position.set(0, 0, 250);
-            camera.lookAt(new THREE.Vector3(0, 0, 0));
-            winnerNumberD        // This is stored client-side for consistent display logic.
-        const LOTTERY_CONFIG = {
-            // Define the list of participants (e.g., employee IDs)
-            participants: Array.from({ length: 47470 - 37370 + 1 }, (_, i) => 37370 + i),
-            // Define the prizes and the number of winners for each
-            prizes: {
-                "third-prize": { name: "Third Prize", count: 5 },
-                "second-prize": { name: "Second Prize", count: 3 },
-                "first-prize": { name: "First Prize", count: 1 },
-                "grand-prize": { name: "Grand Prize", count: 1 },
-            }
-        };
-
-        // --- GLOBAL VARIABLES & ELEMENTS ---
-        let isAdmin = false;
-        let localState = {};
-        let confirmCallback = null;
-        let animationState = 'initial_grid'; // 'initial_grid', 'spinning', 'winner'
-        
-        // UI Elements
-        const prizeNameEl = document.getElementById('prize-name');
-        const prizeCountEl = document.getElementById('prize-count');
-        const winnersListEl = document.getElementById('winners-list');
-        const adminPanel = document.getElementById('admin-panel');
-        const drawBtn = document.getElementById('draw-btn');
-        const prizeSelect = document.getElementById('prize-select');
-        const resetPrizeBtn = document.getElementById('reset-prize-btn');
-        const resetAllBtn = document.getElementById('reset-all-btn');
-        const exportWinnersBtn = document.getElementById('export-winners-btn');
-        const connectionStatusEl = document.getElementById('connection-status');
-        
-        const prizeUploadFile = document.getElementById('prize-upload-file');
-        const uploadPrizeBtn = document.getElementById('upload-prize-btn');
-        const participantUploadFile = document.getElementById('participant-upload-file');
-        const uploadParticipantBtn = document.getElementById('upload-participant-btn');
-        const adminMessageEl = document.getElementById('admin-message');
-        
-        const modal = document.getElementById('confirmation-modal');
-        const modalTitle = document.getElementById('modal-title');
-        const modalText = document.getElementById('modal-text');
-        const modalConfirm = document.getElementById('modal-confirm');
-        const modalCancel = document.getElementById('modal-cancel');
-        
-        const passwordFormContainer = document.getElementById('password-form-container');
-        const passwordForm = document.getElementById('password-form');
-        const passwordInput = document.getElementById('admin-password');
-        const passwordError = document.getElementById('password-error');
-        
-        const adminToggleBtn = document.getElementById('admin-toggle-btn');
-        const adminPanelContent = document.getElementById('admin-panel-content');
-        
-        const lotteryControlsTab = document.getElementById('lottery-controls-tab');
-        const settingsTab = document.getElementById('settings-tab');
-        const lotteryControlsContent = document.getElementById('lottery-controls-content');
-        const settingsContent = document.getElementById('settings-content');
-
-        // Hardcoded admin password for this example.
-        const ADMIN_PASSWORD = "iloveyou!@#$%";
-        
-        // --- Three.js Animation Globals ---
-        let scene, camera, renderer, starScene, starRenderer, starCamera;
-        let cards = [];
-        let cardGroup;
-        let animationFrameId = null;
-        let starAnimationFrameId = null;
-        let winningCard = null;
-        let spinningSpeed = 0;
-        let targetSpinningSpeed = 0;
-        let winnerNumberDisplay = document.getElementById('winner-number-display');
-        
-        // --- Firebase Setup & Real-time Listener ---
-        async function initializeFirebase() {
-            try {
-                if (!firebaseConfig.apiKey) {
-                    throw new Error("Firebase config is missing API key.");
-                }
-
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-
-                // Sign in with custom token if available, otherwise anonymously
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-
-                // Listen for auth state changes to get the user ID
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        connectionStatusEl.textContent = 'Connected';
-                        connectionStatusEl.classList.remove('bg-gray-900', 'text-gray-400', 'bg-red-700');
-                        connectionStatusEl.classList.add('bg-green-700', 'text-white');
-                        
-                        // Set up the real-time listener for the lottery state
-                        const lotteryDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'lottery_data', 'lottery_state');
-                        onSnapshot(lotteryDocRef, (docSnap) => {
-                            if (docSnap.exists()) {
-                                updateUI(docSnap.data());
-                            } else {
-                                console.log("No lottery state found, initializing new state.");
-                                initializeLotteryState();
-                            }
-                        }, (error) => {
-                            console.error("Firestore snapshot error:", error);
-                            connectionStatusEl.textContent = 'Disconnected';
-                            connectionStatusEl.classList.remove('bg-green-700', 'text-white');
-                            connectionStatusEl.classList.add('bg-red-700', 'text-white');
-                        });
-                    } else {
-                        console.log("No user signed in.");
-                    }
-                });
-
-            } catch (error) {
-                console.error("Firebase initialization or authentication failed:", error);
-            }
-        }
-        
-        async function initializeLotteryState() {
-            const lotteryDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'lottery_data', 'lottery_state');
-            const initialPrizeId = Object.keys(LOTTERY_CONFIG.prizes)[0];
-            const initialResults = {};
-            Object.keys(LOTTERY_CONFIG.prizes).forEach(id => { initialResults[id] = []; });
-            const initialState = {
-                running: false,
-                currentPrizeId: initialPrizeId,
-                lastWinner: "READY",
-                results: initialResults
-            };
-            try {
-                await setDoc(lotteryDocRef, initialState);
-            } catch (e) {
-                console.error("Error initializing lottery state:", e);
-            }
-        }
-        
-        // --- Three.js Animation Logic ---
-        let lotteryCanvas, starCanvas;
-        
-        function initThreeJs() {
-            lotteryCanvas = document.getElementById('lottery-canvas');
-            starCanvas = document.getElementById('bg-canvas');
-            
-            // Main lottery scene setup
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.z = 250;
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            lotteryCanvas.appendChild(renderer.domElement);
-            
-            // Starfield scene setup
-            starScene = new THREE.Scene();
-            starCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            starCamera.position.z = 5;
-            starRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            starRenderer.setSize(window.innerWidth, window.innerHeight);
-            starCanvas.appendChild(starRenderer.domElement);
-
-            // Create starfield
-            const starVertices = [];
-            for (let i = 0; i < 10000; i++) {
-                const x = (Math.random() - 0.5) * 2000;
-                const y = (Math.random() - 0.5) * 2000;
-                const z = (Math.random() - 0.5) * 2000;
-                starVertices.push(x, y, z);
-            }
-            const starGeometry = new THREE.BufferGeometry();
-            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
-            const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.7 });
-            const stars = new THREE.Points(starGeometry, starMaterial);
-            starScene.add(stars);
-
-            // Create cards and add them to the main scene
-            createInitialGrid();
-            
-            // Start both animation loops
-            animateStars();
-            animateCards();
-        }
-        
-        function createCard(participantNumber) {
-            // Create a canvas to use as a texture for the card
-            const canvas = document.createElement('canvas');
-            const size = 256;
-            canvas.width = size;
-            canvas.height = size / 1.5; // Aspect ratio for the card
-            const ctx = canvas.getContext('2d');
-            
-            ctx.fillStyle = '#0f0c29';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            ctx.strokeStyle = '#a855f7';
-            ctx.lineWidth = 4;
-            ctx.strokeRect(0, 0, canvas.width, canvas.height);
-            
-            ctx.fillStyle = '#fefde8';
-            ctx.font = 'bold 64px Inter';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(participantNumber, canvas.width / 2, canvas.height / 2);
-            
-            const texture = new THREE.CanvasTexture(canvas);
-            
-            const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
-            const geometry = new THREE.PlaneGeometry(25, 15);
-            const card = new THREE.Mesh(geometry, material);
-            card.participantNumber = participantNumber; // Store the number on the card object
-            return card;
-        }
-
-        function createInitialGrid() {
-            cardGroup = new THREE.Group();
-            cards = [];
-            
-            const numCards = 7 * 25;
-            const cardSize = 30;
-            const cardsPerRow = 25;
-            const cardsPerCol = 7;
-
-            for (let i = 0; i < numCards; i++) {
-                const randomNumber = Math.floor(Math.random() * 99999) + 1; // Random number for initial display
-                const card = createCard(randomNumber);
-                const row = Math.floor(i / cardsPerRow);
-                const col = i % cardsPerRow;
-                
-                const x = (col - cardsPerRow / 2 + 0.5) * cardSize;
-                const y = (cardsPerCol / 2 - row - 0.5) * cardSize;
-                const z = 0;
-                
-                card.position.set(x, y, z);
-                card.userData.initialPosition = card.position.clone();
-                card.userData.initialRotation = card.rotation.clone();
-                
-                // Calculate sphere position for a smooth transition
-                const phi = Math.acos(-1 + (2 * i) / numCards);
-                const theta = Math.sqrt(numCards * Math.PI) * phi;
-                
-                card.userData.spherePosition = new THREE.Vector3(
-                    150 * Math.cos(theta) * Math.sin(phi),
-                    150 * Math.sin(theta) * Math.sin(phi),
-                    150 * Math.cos(phi)
-                );
-
-                cardGroup.add(card);
-                cards.push(card);
-            }
-            scene.add(cardGroup);
-        }
-
-        function animateStars() {
-            // Animate starfield background
-            const stars = starScene.children[0];
-            if (stars) {
-                stars.position.z += 0.2;
-                if (stars.position.z > 1000) {
-                    stars.position.z = -1000;
-                }
-            }
-            starRenderer.render(starScene, starCamera);
-            starAnimationFrameId = requestAnimationFrame(animateStars);
-        }
-        
-        function updateCardContent(card, newNumber) {
-            const canvas = card.material.map.image;
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear previous content
-            
-            ctx.fillStyle = '#0f0c29';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            ctx.strokeStyle = '#a855f7';
-            ctx.lineWidth = 4;
-            ctx.strokeRect(0, 0, canvas.width, canvas.height);
-            
-            ctx.fillStyle = '#fefde8';
-            ctx.font = 'bold 64px Inter';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(newNumber, canvas.width / 2, canvas.height / 2);
-            
-            card.material.map.needsUpdate = true; // Tell Three.js to update the texture
-            card.participantNumber = newNumber;
-        }
-
-        function animateCards() {
-            const time = performance.now() / 1000;
-            
-            switch(animationState) {
-                case 'initial_grid':
-                    // Slowly rotate the card group and update numbers for a subtle effect
-                    cardGroup.rotation.x = Math.sin(time * 0.1) * 0.05;
-                    cardGroup.rotation.y = Math.cos(time * 0.1) * 0.05;
-                    
-                    // Update numbers randomly on some cards
-                    if (Math.random() < 0.05) { // Update a few cards per frame
+                    if (Math.random() < 1) { // Update a few cards per frame
                         const cardToUpdate = cards[Math.floor(Math.random() * cards.length)];
                         const newNumber = Math.floor(Math.random() * 99999) + 1;
                         updateCardContent(cardToUpdate, newNumber);
@@ -807,10 +514,40 @@
                 const winnersForPrize = state.results[state.currentPrizeId] || [];
                 prizeCountEl.textContent = `${winnersForPrize.length}/${currentPrizeConfig.count} Winners`;
             } else {
-                 prizeNameEl.textContent = 'No Prize Selected';
-                 prizeCountEl.textContent = '';
+                 prizeNameEl.textContent = '--';
+                 prizeCountEl.textContent = '--/-- Winners';
             }
             
+            // Update the generated prize description display
+            generatedDescriptionEl.textContent = state.prizeDescription || "No description generated yet.";
+
+            // Update winner announcement display
+            if (state.winnerAnnouncement && state.lastWinner !== "READY" && state.lastWinner !== "NO ONE LEFT" && state.lastWinner !== "CLEARED") {
+                 generatedAnnouncementEl.textContent = state.winnerAnnouncement;
+                 announcementContainer.classList.remove('hidden');
+                 generatedAnnouncementEl.classList.remove('hidden');
+                 speakAnnouncementBtn.classList.remove('hidden');
+            } else {
+                 announcementContainer.classList.add('hidden');
+                 generatedAnnouncementEl.textContent = "";
+            }
+
+            // Update next prize teaser display
+            if (state.nextPrizeTeaser) {
+                nextPrizeTeaserEl.textContent = state.nextPrizeTeaser;
+                nextPrizeTeaserEl.classList.remove('hidden');
+            } else {
+                nextPrizeTeaserEl.classList.add('hidden');
+            }
+
+            // Update winner fun fact display
+            if (state.winnerFunFact && state.lastWinner !== "READY" && state.lastWinner !== "NO ONE LEFT" && state.lastWinner !== "CLEARED") {
+                winnerFunFactEl.textContent = state.winnerFunFact;
+                winnerFunFactEl.classList.remove('hidden');
+            } else {
+                winnerFunFactEl.classList.add('hidden');
+            }
+
             if (state.running) {
                 if(animationState !== 'spinning') {
                     animationState = 'spinning';
@@ -892,7 +629,7 @@
             if (localState.running) return;
             const lotteryDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'lottery_data', 'lottery_state');
             try {
-                await setDoc(lotteryDocRef, { running: true }, { merge: true });
+                await setDoc(lotteryDocRef, { running: true, winnerAnnouncement: "", winnerFunFact: "" }, { merge: true });
             } catch (e) {
                 console.error("Error starting draw:", e);
                 return;
@@ -925,6 +662,9 @@
                     lastWinner: newWinner,
                     results: { ...localState.results, [localState.currentPrizeId]: updatedWinners }
                 }, { merge: true });
+                
+                // Immediately generate a fun fact for the new winner
+                handleGenerateFunFact(newWinner);
             } catch (e) {
                 console.error("Error picking winner:", e);
             }
@@ -934,7 +674,7 @@
             const newPrizeId = e.target.value;
             const lotteryDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'lottery_data', 'lottery_state');
             try {
-                await setDoc(lotteryDocRef, { currentPrizeId: newPrizeId, lastWinner: "READY", running: false }, { merge: true });
+                await setDoc(lotteryDocRef, { currentPrizeId: newPrizeId, lastWinner: "READY", running: false, prizeDescription: "", nextPrizeTeaser: "" }, { merge: true });
             } catch (e) {
                 console.error("Error changing prize:", e);
             }
@@ -1056,6 +796,230 @@
             };
             reader.readAsText(file);
         }
+
+        // --- Gemini API Functions ---
+        async function generateTextWithBackoff(prompt, maxRetries = 5, delay = 1000) {
+            let chatHistory = [];
+            chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+            const payload = { contents: chatHistory };
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (response.ok) {
+                        const result = await response.json();
+                        if (result.candidates && result.candidates.length > 0 &&
+                            result.candidates[0].content && result.candidates[0].content.parts &&
+                            result.candidates[0].content.parts.length > 0) {
+                            return result.candidates[0].content.parts[0].text;
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Attempt ${i + 1} failed:`, error);
+                }
+                await new Promise(res => setTimeout(res, delay * Math.pow(2, i)));
+            }
+            throw new Error("Failed to generate content after multiple retries.");
+        }
+        
+        async function generateAndSavePrizeDescription() {
+            const prizeName = LOTTERY_CONFIG.prizes[localState.currentPrizeId].name;
+            const prompt = `Generate a fun, engaging, and brief marketing-style description for a lottery prize named '${prizeName}'. The description should be suitable for a company staff party event.`;
+            
+            generateDescriptionBtn.textContent = 'Generating...';
+            generateDescriptionBtn.disabled = true;
+            try {
+                const description = await generateTextWithBackoff(prompt);
+                const lotteryDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'lottery_data', 'lottery_state');
+                await setDoc(lotteryDocRef, { prizeDescription: description }, { merge: true });
+                showMessage("Prize description generated successfully!");
+            } catch (error) {
+                showMessage("Failed to generate prize description.", true);
+            } finally {
+                generateDescriptionBtn.textContent = '✨ Generate Prize Description';
+                generateDescriptionBtn.disabled = false;
+            }
+        }
+        
+        async function generateAndSaveWinnerAnnouncement() {
+            const prizeName = LOTTERY_CONFIG.prizes[localState.currentPrizeId].name;
+            const winnerNumber = localState.lastWinner;
+            const prompt = `Generate a short, celebratory announcement for a lottery winner. The winner's number is '${winnerNumber}' and the prize is '${prizeName}'. Make it sound exciting and encouraging for a staff party.`;
+
+            generateAnnouncementBtn.textContent = 'Generating...';
+            generateAnnouncementBtn.disabled = true;
+            try {
+                const announcement = await generateTextWithBackoff(prompt);
+                const lotteryDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'lottery_data', 'lottery_state');
+                await setDoc(lotteryDocRef, { winnerAnnouncement: announcement }, { merge: true });
+                showMessage("Winner announcement generated successfully!");
+            } catch (error) {
+                showMessage("Failed to generate winner announcement.", true);
+            } finally {
+                generateAnnouncementBtn.textContent = '✨ Generate Announcement';
+                generateAnnouncementBtn.disabled = false;
+            }
+        }
+
+        async function speakAnnouncement() {
+            const text = generatedAnnouncementEl.textContent;
+            if (!text) {
+                showMessage("No announcement text to speak.", true);
+                return;
+            }
+
+            speakAnnouncementBtn.textContent = 'Speaking...';
+            speakAnnouncementBtn.disabled = true;
+            try {
+                const payload = {
+                    contents: [{
+                        parts: [{ text: `Say with an excited, celebratory tone: ${text}` }]
+                    }],
+                    generationConfig: {
+                        responseModalities: ["AUDIO"],
+                        speechConfig: {
+                            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } }
+                        }
+                    },
+                    model: "gemini-2.5-flash-preview-tts"
+                };
+                
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error("TTS API call failed.");
+                
+                const result = await response.json();
+                const part = result?.candidates?.[0]?.content?.parts?.[0];
+                const audioData = part?.inlineData?.data;
+                const mimeType = part?.inlineData?.mimeType;
+
+                if (audioData && mimeType && mimeType.startsWith("audio/")) {
+                    const base64ToArrayBuffer = (base64) => {
+                        const binaryString = atob(base64);
+                        const len = binaryString.length;
+                        const bytes = new Uint8Array(len);
+                        for (let i = 0; i < len; i++) {
+                            bytes[i] = binaryString.charCodeAt(i);
+                        }
+                        return bytes.buffer;
+                    };
+
+                    const pcmToWav = (pcmData, sampleRate) => {
+                        const wavHeader = (data) => {
+                            const buffer = new ArrayBuffer(44);
+                            const view = new DataView(buffer);
+                            // RIFF identifier
+                            writeString(view, 0, 'RIFF');
+                            // RIFF chunk length
+                            view.setUint32(4, 36 + data.length, true);
+                            // WAVE type
+                            writeString(view, 8, 'WAVE');
+                            // format chunk identifier
+                            writeString(view, 12, 'fmt ');
+                            // format chunk length
+                            view.setUint32(16, 16, true);
+                            // sample format (1 = PCM)
+                            view.setUint16(20, 1, true);
+                            // channel count
+                            view.setUint16(22, 1, true);
+                            // sample rate
+                            view.setUint32(24, sampleRate, true);
+                            // byte rate
+                            view.setUint32(28, sampleRate * 2, true);
+                            // block align
+                            view.setUint16(32, 2, true);
+                            // bits per sample
+                            view.setUint16(34, 16, true);
+                            // data chunk identifier
+                            writeString(view, 36, 'data');
+                            // data chunk length
+                            view.setUint32(40, data.length, true);
+                            return view;
+                        };
+
+                        const writeString = (view, offset, string) => {
+                            for (let i = 0; i < string.length; i++) {
+                                view.setUint8(offset + i, string.charCodeAt(i));
+                            }
+                        };
+                        
+                        const header = wavHeader(pcmData);
+                        const blob = new Blob([header, pcmData], { type: 'audio/wav' });
+                        return blob;
+                    };
+
+                    const sampleRate = parseInt(mimeType.match(/rate=(\d+)/)[1], 10);
+                    const pcmData = base64ToArrayBuffer(audioData);
+                    const pcm16 = new Int16Array(pcmData);
+                    const wavBlob = pcmToWav(pcm16, sampleRate);
+                    
+                    const audio = new Audio(URL.createObjectURL(wavBlob));
+                    audio.play();
+
+                    audio.onended = () => {
+                        speakAnnouncementBtn.textContent = '✨ Speak Announcement';
+                        speakAnnouncementBtn.disabled = false;
+                    };
+                } else {
+                    throw new Error("Invalid audio data from API.");
+                }
+            } catch (error) {
+                console.error("TTS API error:", error);
+                showMessage("Failed to generate or play speech.", true);
+                speakAnnouncementBtn.textContent = '✨ Speak Announcement';
+                speakAnnouncementBtn.disabled = false;
+            }
+        }
+
+        async function generateAndSaveTeaser() {
+            const nextPrizeName = LOTTERY_CONFIG.prizes[localState.currentPrizeId].name;
+            const prompt = `Generate a short, exciting teaser for the next prize in a company staff lottery. The next prize is named '${nextPrizeName}'. The teaser should be very energetic and build anticipation.`;
+
+            generateTeaserBtn.textContent = 'Generating...';
+            generateTeaserBtn.disabled = true;
+            try {
+                const teaser = await generateTextWithBackoff(prompt);
+                const lotteryDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'lottery_data', 'lottery_state');
+                await setDoc(lotteryDocRef, { nextPrizeTeaser: teaser }, { merge: true });
+                showMessage("Prize teaser generated successfully!");
+            } catch (error) {
+                showMessage("Failed to generate prize teaser.", true);
+            } finally {
+                generateTeaserBtn.textContent = '✨ Generate Teaser';
+                generateTeaserBtn.disabled = false;
+            }
+        }
+
+        async function handleGenerateFunFact(winnerNumber) {
+            const prompt = `Generate a fun and interesting fact about the number ${winnerNumber}. The fact should be suitable for a celebratory announcement at a staff party. Keep it concise.`;
+
+            generateFunFactBtn.textContent = 'Generating...';
+            generateFunFactBtn.disabled = true;
+            try {
+                const funFact = await generateTextWithBackoff(prompt);
+                const lotteryDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'lottery_data', 'lottery_state');
+                await setDoc(lotteryDocRef, { winnerFunFact: funFact }, { merge: true });
+                showMessage("Fun fact generated successfully!");
+            } catch (error) {
+                showMessage("Failed to generate fun fact.", true);
+            } finally {
+                generateFunFactBtn.textContent = '✨ Generate Fun Fact';
+                generateFunFactBtn.disabled = false;
+            }
+        }
         
         function setupLottery() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -1088,6 +1052,20 @@
                     exportWinnersBtn.addEventListener('click', handleExportWinners);
                     uploadPrizeBtn.addEventListener('click', handlePrizeUpload);
                     uploadParticipantBtn.addEventListener('click', handleParticipantUpload);
+
+                    // Add new Gemini API event listeners
+                    generateDescriptionBtn.addEventListener('click', generateAndSavePrizeDescription);
+                    generateAnnouncementBtn.addEventListener('click', generateAndSaveWinnerAnnouncement);
+                    speakAnnouncementBtn.addEventListener('click', speakAnnouncement);
+                    generateTeaserBtn.addEventListener('click', generateAndSaveTeaser);
+                    generateFunFactBtn.addEventListener('click', () => {
+                         if (localState.lastWinner && localState.lastWinner !== "READY" && localState.lastWinner !== "NO ONE LEFT" && localState.lastWinner !== "CLEARED") {
+                             handleGenerateFunFact(localState.lastWinner);
+                         } else {
+                             showMessage("Please draw a winner first to generate a fun fact.", true);
+                         }
+                    });
+
                 } else {
                     passwordError.textContent = "Incorrect password.";
                     passwordError.classList.remove('hidden');
@@ -1168,6 +1146,10 @@
                          0 0 20px rgba(255, 255, 232, 0.5),
                          0 0 45px rgba(255, 255, 232, 0.3),
                          0 0 75px #ffdd00;
+        }
+        
+        .winner-fun-fact {
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
         }
 
         .winner-card {
@@ -1250,22 +1232,39 @@
     <div id="bg-canvas"></div>
     <div id="lottery-canvas" class="flex items-center justify-center">
         <div id="winner-number-display" class="main-number hidden"></div>
+        <p id="winner-fun-fact" class="hidden text-xl font-semibold mt-4 text-center max-w-lg winner-fun-fact">
+            <!-- Fun fact will be displayed here -->
+        </p>
     </div>
     
     <div id="app-container" class="w-full h-screen flex flex-col items-center justify-between p-4 md:p-8">
         
         <!-- Header -->
         <header class="w-full flex justify-between items-center">
-            <h1 class="text-2xl md:text-4xl font-bold text-amber-300">YKKO : Staff Party - Lucky Draw Event</h1>
+            <h1 class="text-2xl md:text-4xl font-bold text-amber-300"> : Staff Party - Lucky Draw Event</h1>
             <div id="prize-info" class="text-right">
+                <p id="next-prize-teaser" class="text-lg italic text-gray-400 hidden">
+                    <!-- Prize teaser will be displayed here -->
+                </p>
                 <h2 id="prize-name" class="text-xl md:text-3xl font-bold text-white">--</h2>
                 <p id="prize-count" class="text-gray-300">--/-- Winners</p>
+                <div class="mt-2 text-white p-2 rounded-lg bg-black bg-opacity-30 max-w-sm ml-auto">
+                    <p id="generated-description" class="text-sm italic text-gray-200">
+                        No description generated yet.
+                    </p>
+                </div>
             </div>
         </header>
 
         <!-- Main Display (Now managed by Three.js canvas) -->
-        <main class="flex-grow flex items-center justify-center relative w-full">
+        <main class="flex-grow flex flex-col items-center justify-center relative w-full">
             <!-- Content of this main section is now handled by lottery-canvas -->
+            <div id="announcement-container" class="hidden text-center max-w-2xl">
+                 <p id="generated-announcement" class="text-2xl font-semibold mb-4"></p>
+                 <button id="speak-announcement-btn" class="btn bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hidden">
+                    ✨ Speak Announcement
+                 </button>
+            </div>
         </main>
 
         <!-- Winners Display -->
@@ -1316,6 +1315,18 @@
                             <select id="prize-select" class="btn bg-gray-700 text-white py-2 px-4 rounded-lg border border-gray-600">
                                 <!-- Options will be populated by JS -->
                             </select>
+                            <button id="generate-teaser-btn" class="btn bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-lg">
+                                ✨ Generate Teaser
+                            </button>
+                            <button id="generate-description-btn" class="btn bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-lg">
+                                ✨ Generate Prize Description
+                            </button>
+                            <button id="generate-announcement-btn" class="btn bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-lg">
+                                ✨ Generate Announcement
+                            </button>
+                            <button id="generate-fun-fact-btn" class="btn bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-lg">
+                                ✨ Generate Fun Fact
+                            </button>
                             <button id="reset-prize-btn" class="btn bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg">Reset Current Prize</button>
                             <button id="reset-all-btn" class="btn bg-red-700 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg">Reset All</button>
                             <button id="export-winners-btn" class="btn bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg">Export Winners</button>
@@ -1357,5 +1368,35 @@
             </div>
         </div>
     </div>
+</body>
+</html>
+            `;
+            
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'lottery-app.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
+            `;
+
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'lottery-app.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
 </body>
 </html>
